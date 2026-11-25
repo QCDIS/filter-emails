@@ -17,7 +17,10 @@ If you activate `.venv` first (`source .venv/bin/activate`), you can instead use
 `python -m pip install -r requirements.txt` and `python filter_emls.py <source_directory>`.
 
 Emails from senders listed in `input/from_email_adresses.txt` are copied to `results/`.
-Before saving, the script scans email headers and decoded text MIME parts with
+Before scanning, it removes unrelated top-level headers, keeping `From` (the sender),
+`To`, `Subject`, `Message-ID`, `In-Reply-To`, and `References`, along with the MIME
+headers needed to preserve the message content. It then scans email headers and decoded
+text MIME parts with
 [detect-secrets](https://github.com/Yelp/detect-secrets) and replaces detected values with
 `[REDACTED SECRET]`. It prints the subject, sender, date, and `.eml` filename for each
 matching email where it found secrets, without printing the secret values. Other messages
