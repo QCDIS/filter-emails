@@ -9,26 +9,6 @@ from detect_secrets.core.scan import scan_line
 from detect_secrets.settings import default_settings
 
 
-def filter_eml_fields(message: Message) -> None:
-    retained_headers = {
-        "from",
-        "in-reply-to",
-        "message-id",
-        "references",
-        "subject",
-        "to",
-        "date",
-    }
-
-    for header_name in dict.fromkeys(name for name, _ in message.items()):
-        normalized_name = header_name.lower()
-        if normalized_name in retained_headers or normalized_name.startswith("content-"):
-            continue
-        if normalized_name == "mime-version":
-            continue
-        del message[header_name]
-
-
 def _redact_secrets(text: str) -> str:
     redacted_lines = []
     in_private_key = False
@@ -129,17 +109,13 @@ def process_eml_files(
         if not any(sender in from_header for sender in lowercase_target_senders):
             continue
 
-        subject = str(message.get("Subject") or "(no subject)")
-        sender = str(message.get("From") or "(unknown sender)")
-        date = str(message.get("Date") or "(unknown date)")
-        filter_eml_fields(message)
         found_secrets = sanitize_email(message)
         destination = dst_dir / eml_path.name
         if found_secrets:
             findings.append((
-                subject,
-                sender,
-                date,
+                str(message.get("Subject") or "(no subject)"),
+                str(message.get("From") or "(unknown sender)"),
+                str(message.get("Date") or "(unknown date)"),
                 eml_path.name,
             ))
             destination.write_bytes(message.as_bytes(policy=policy.default))
