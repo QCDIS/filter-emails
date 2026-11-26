@@ -1,5 +1,6 @@
 from email import policy
 from email.message import EmailMessage, Message
+from email.parser import BytesParser
 from pathlib import Path
 import tempfile
 import unittest
@@ -138,6 +139,24 @@ class RedactSecretsTests(unittest.TestCase):
         self.assertNotIn(secret.encode(), serialized)
         self.assertIn(b"multipart/mixed", serialized)
         self.assertIn(b"[REDACTED SECRET]", serialized)
+
+    def test_uses_utf8_when_redacted_content_exceeds_original_charset(self):
+        secret = "AKIAIOSFODNN7EXAMPLE"
+        message = BytesParser(policy=policy.default).parsebytes(
+            b"From: sender@example.org\r\n"
+            b"Content-Type: text/plain; charset=gb2312\r\n"
+            b"Content-Transfer-Encoding: 8bit\r\n"
+            b"\r\n"
+            + b"unrepresentable: \xff\n"
+            + f"AWS_ACCESS_KEY_ID={secret}\n".encode()
+        )
+
+        self.assertTrue(sanitize_email(message))
+        content = message.get_content()
+
+        self.assertEqual(message.get_content_charset(), "utf-8")
+        self.assertIn("[REDACTED SECRET]", content)
+        self.assertIn("\ufffd", content)
 
     def test_filter_eml_fields_keeps_requested_headers_and_content(self):
         message = EmailMessage()

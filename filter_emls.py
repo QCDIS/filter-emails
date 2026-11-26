@@ -1,6 +1,7 @@
 import argparse
 import re
 import shutil
+import sys
 from email import policy
 from email.message import Message
 from email.parser import BytesParser
@@ -93,6 +94,10 @@ def sanitize_email(message: Message) -> bool:
             content_options = {"subtype": part.get_content_subtype(), "params": params}
             charset = part.get_content_charset()
             if charset:
+                try:
+                    sanitized_content.encode(charset)
+                except UnicodeEncodeError:
+                    charset = "utf-8"
                 content_options["charset"] = charset
             part.set_content(sanitized_content, **content_options)
             changed = True
@@ -175,6 +180,8 @@ def process_eml_files(
 
 
 def main() -> int:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
     script_dir = Path(__file__).parent
     dst_dir = script_dir / "results"
     dst_dir.mkdir(exist_ok=True)
