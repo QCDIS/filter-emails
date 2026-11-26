@@ -10,7 +10,7 @@ python3 -m venv .venv
 Run the filter using that same environment:
 
 ```sh
-.venv/bin/python filter_emls.py <source_directory>
+.venv/bin/python filter_emls.py <source_directory> <subdirectory, e.g. Virtual_lab_support>
 ```
 
 If you activate `.venv` first (`source .venv/bin/activate`), you can instead use

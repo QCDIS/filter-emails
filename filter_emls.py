@@ -11,7 +11,6 @@ from detect_secrets.core.scan import scan_line
 from detect_secrets.settings import default_settings
 
 KEYWORDS = ("password", "wachtwoord", "secret")
-SUBDIRECTORY = "Virtual_lab_support"
 
 def filter_eml_fields(message: Message) -> None:
     retained_headers = {
