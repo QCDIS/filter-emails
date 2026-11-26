@@ -10,7 +10,7 @@ from detect_secrets.core.scan import scan_line
 from detect_secrets.settings import default_settings
 
 KEYWORDS = ("password", "wachtwoord", "secret")
-
+SUBDIRECTORY = "Virtual_lab_support"
 
 def filter_eml_fields(message: Message) -> None:
     retained_headers = {
@@ -130,7 +130,7 @@ def find_keywords(message: Message) -> list[tuple[str, list[str]]]:
 
 
 def process_eml_files(
-    src_dir: Path,
+    input_eml_files: list[Path],
     dst_dir: Path,
 ) -> tuple[
     list[tuple[str, str, str, str]],
@@ -139,7 +139,7 @@ def process_eml_files(
     secret_findings = []
     keyword_findings = []
 
-    for eml_path in src_dir.glob("*.eml"):
+    for eml_path in input_eml_files:
         with eml_path.open("rb") as source:
             message = BytesParser(policy=policy.default).parse(source)
 
@@ -181,16 +181,21 @@ def main() -> int:
 
     parser = argparse.ArgumentParser()
     parser.add_argument("source_directory", help="Directory to process")
+    parser.add_argument("subdirectory", help="Subdirectory to process")
     args = parser.parse_args()
 
     print(f"Source directory: {args.source_directory}")
     src_dir = Path(args.source_directory)
-    if not any(src_dir.glob("*.eml")):
-        print(f"No .eml files found in the {src_dir=}.")
+    subdirectory = args.subdirectory
+    pattern = f"**/{subdirectory}/*.eml" if subdirectory is not None else "*.eml"
+    input_eml_files = src_dir.rglob(pattern)
+
+    if not any(input_eml_files):
+        print(f"No .eml files found in the {src_dir=} in the {subdirectory=}.")
         return 1
 
     secret_findings, keyword_findings = process_eml_files(
-        src_dir,
+        input_eml_files,
         dst_dir
     )
     if secret_findings:

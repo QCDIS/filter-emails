@@ -51,14 +51,14 @@ class RedactSecretsTests(unittest.TestCase):
         self.assertNotIn("MIIE_fake_private_key_material", result)
         self.assertEqual(result.count("[REDACTED SECRET]"), 3)
 
-    def test_processes_matching_sender_and_decodes_mime_content(self):
-        secret = "ghp_abcdefghijklmnopqrstuvwxyz1234567890"
+    def test_processes_input_eml_files_and_redacts_detected_secrets(self):
+        secret = "AKIAIOSFODNN7EXAMPLE"
         message = EmailMessage()
         message["From"] = "Example <sender@example.org>"
         message["To"] = "recipient@example.org"
         message["Subject"] = "Credentials"
         message["Date"] = "Tue, 25 Nov 2026 10:00:00 +0000"
-        message.set_content(f"token: {secret}\n", cte="base64")
+        message.set_content(f"AWS_ACCESS_KEY_ID={secret}\n", cte="base64")
 
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -66,12 +66,11 @@ class RedactSecretsTests(unittest.TestCase):
             destination_directory = root / "results"
             source_directory.mkdir()
             destination_directory.mkdir()
-            (source_directory / "matched.eml").write_bytes(
-                message.as_bytes(policy=policy.default)
-            )
+            input_path = source_directory / "matched.eml"
+            input_path.write_bytes(message.as_bytes(policy=policy.default))
 
             secret_findings, keyword_findings = process_eml_files(
-                source_directory,
+                [input_path],
                 destination_directory,
             )
 
@@ -102,12 +101,13 @@ class RedactSecretsTests(unittest.TestCase):
             destination_directory = root / "results"
             source_directory.mkdir()
             destination_directory.mkdir()
-            (source_directory / "keyword.eml").write_bytes(
+            input_path = source_directory / "keyword.eml"
+            input_path.write_bytes(
                 message.as_bytes(policy=policy.default)
             )
 
             secret_findings, keyword_findings = process_eml_files(
-                source_directory,
+                [input_path],
                 destination_directory,
             )
 
