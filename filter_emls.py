@@ -132,7 +132,6 @@ def find_keywords(message: Message) -> list[tuple[str, list[str]]]:
 def process_eml_files(
     src_dir: Path,
     dst_dir: Path,
-    lowercase_target_senders: list[str],
 ) -> tuple[
     list[tuple[str, str, str, str]],
     list[tuple[str, str, str, str, list[tuple[str, list[str]]]]],
@@ -145,8 +144,6 @@ def process_eml_files(
             message = BytesParser(policy=policy.default).parse(source)
 
         from_header = (message.get("From") or "").lower()
-        if not any(sender in from_header for sender in lowercase_target_senders):
-            continue
 
         subject = str(message.get("Subject") or "(no subject)")
         sender = str(message.get("From") or "(unknown sender)")
@@ -182,10 +179,6 @@ def main() -> int:
     dst_dir = script_dir / "results"
     dst_dir.mkdir(exist_ok=True)
 
-    with (script_dir / "input/from_email_adresses.txt").open() as sender_file:
-        target_senders = sender_file.read().splitlines()
-    lowercase_target_senders = [sender.lower() for sender in target_senders]
-
     parser = argparse.ArgumentParser()
     parser.add_argument("source_directory", help="Directory to process")
     args = parser.parse_args()
@@ -198,8 +191,7 @@ def main() -> int:
 
     secret_findings, keyword_findings = process_eml_files(
         src_dir,
-        dst_dir,
-        lowercase_target_senders,
+        dst_dir
     )
     if secret_findings:
         print("Secrets found in these emails (values are not shown):")

@@ -73,7 +73,6 @@ class RedactSecretsTests(unittest.TestCase):
             secret_findings, keyword_findings = process_eml_files(
                 source_directory,
                 destination_directory,
-                ["sender@example.org"],
             )
 
             result = (destination_directory / "matched.eml").read_bytes()
@@ -110,7 +109,6 @@ class RedactSecretsTests(unittest.TestCase):
             secret_findings, keyword_findings = process_eml_files(
                 source_directory,
                 destination_directory,
-                ["sender@example.org"],
             )
 
         self.assertEqual(secret_findings, [])
@@ -124,29 +122,6 @@ class RedactSecretsTests(unittest.TestCase):
                 [("Verander uw wachtwoord.", ["wachtwoord"])],
             )],
         )
-
-    def test_does_not_copy_nonmatching_sender(self):
-        message = EmailMessage()
-        message["From"] = "sender@example.org"
-        message.set_content("password: ordinary text\n")
-
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
-            source_directory = root / "source"
-            destination_directory = root / "results"
-            source_directory.mkdir()
-            destination_directory.mkdir()
-            (source_directory / "unmatched.eml").write_bytes(
-                message.as_bytes(policy=policy.default)
-            )
-
-            process_eml_files(
-                source_directory,
-                destination_directory,
-                ["other@example.org"],
-            )
-
-            self.assertFalse((destination_directory / "unmatched.eml").exists())
 
     def test_serializes_text_part_with_multipart_payload_after_redaction(self):
         secret = "AKIAIOSFODNN7EXAMPLE"
