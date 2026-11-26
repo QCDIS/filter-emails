@@ -71,18 +71,6 @@ def sanitize_email(message: Message) -> bool:
 
     with default_settings():
         for part in message.walk():
-            headers = list(part.items())
-            sanitized_headers = [
-                (name, _redact_secrets(str(value)))
-                for name, value in headers
-            ]
-            if sanitized_headers != headers:
-                for name in dict.fromkeys(name for name, _ in headers):
-                    del part[name]
-                for name, value in sanitized_headers:
-                    part[name] = value
-                changed = True
-
             if part.is_multipart() or part.get_content_maintype() != "text":
                 continue
 

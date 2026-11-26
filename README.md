@@ -25,3 +25,9 @@ text MIME parts with
 `[REDACTED SECRET]`. It prints the subject, sender, date, and `.eml` filename for each
 matching email where it found secrets, without printing the secret values. Other messages
 are not copied. Secret scanners are heuristic and cannot guarantee detection of every secret.
+
+### Run tests
+
+```sh
+ .venv/bin/python -m unittest -v && .venv/bin/python -m py_compile filter_emls.py test_filter_emls.py
+```
