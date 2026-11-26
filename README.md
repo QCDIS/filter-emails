@@ -24,7 +24,10 @@ text MIME parts with
 [detect-secrets](https://github.com/Yelp/detect-secrets) and replaces detected values with
 `[REDACTED SECRET]`. It prints the subject, sender, date, and `.eml` filename for each
 matching email where it found secrets, without printing the secret values. Other messages
-are not copied. Secret scanners are heuristic and cannot guarantee detection of every secret.
+are not copied. It also reports matching emails containing the whole words `password`,
+`wachtwoord`, or `secret` (case-insensitively), printing each complete matching line.
+Those lines may contain sensitive information. Secret scanners are heuristic and cannot
+guarantee detection of every secret.
 
 ### Run tests
 

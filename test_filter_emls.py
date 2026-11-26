@@ -6,13 +6,28 @@ import unittest
 
 from filter_emls import (
     filter_eml_fields,
+    find_keywords,
     process_eml_files,
     redact_secrets,
     sanitize_email,
 )
 
+from detect_secrets.core.scan import scan_line
 
 class RedactSecretsTests(unittest.TestCase):
+    def test_find_keywords_case_insensitively_as_whole_words(self):
+        message = EmailMessage()
+        message["Subject"] = "Password reset"
+        message.set_content("Voer wachtwoord in; secretive is not a match.\n")
+
+        self.assertEqual(
+            find_keywords(message),
+            [
+                ("Subject: Password reset", ["password"]),
+                ("Voer wachtwoord in; secretive is not a match.", ["wachtwoord"]),
+            ],
+        )
+
     def test_redacts_detected_secret_and_preserves_surrounding_text(self):
         secret = "ghp_abcdefghijklmnopqrstuvwxyz1234567890"
         text = f"before\npassword: {secret}\nafter\n"
@@ -55,7 +70,7 @@ class RedactSecretsTests(unittest.TestCase):
                 message.as_bytes(policy=policy.default)
             )
 
-            findings = process_eml_files(
+            secret_findings, keyword_findings = process_eml_files(
                 source_directory,
                 destination_directory,
                 ["sender@example.org"],
@@ -66,12 +81,47 @@ class RedactSecretsTests(unittest.TestCase):
         self.assertNotIn(secret.encode(), result)
         self.assertIn(b"[REDACTED SECRET]", result)
         self.assertEqual(
-            findings,
+            secret_findings,
             [(
                 "Credentials",
                 "Example <sender@example.org>",
                 "Wed, 25 Nov 2026 10:00:00 +0000",
                 "matched.eml",
+            )],
+        )
+        self.assertEqual(keyword_findings, [])
+
+    def test_reports_keywords_even_when_no_secret_is_detected(self):
+        message = EmailMessage()
+        message["From"] = "sender@example.org"
+        message["Subject"] = "Account update"
+        message.set_content("Verander uw wachtwoord.\n")
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            source_directory = root / "source"
+            destination_directory = root / "results"
+            source_directory.mkdir()
+            destination_directory.mkdir()
+            (source_directory / "keyword.eml").write_bytes(
+                message.as_bytes(policy=policy.default)
+            )
+
+            secret_findings, keyword_findings = process_eml_files(
+                source_directory,
+                destination_directory,
+                ["sender@example.org"],
+            )
+
+        self.assertEqual(secret_findings, [])
+        self.assertEqual(
+            keyword_findings,
+            [(
+                "Account update",
+                "sender@example.org",
+                "(unknown date)",
+                "keyword.eml",
+                [("Verander uw wachtwoord.", ["wachtwoord"])],
             )],
         )
 
@@ -144,7 +194,6 @@ class RedactSecretsTests(unittest.TestCase):
             },
         )
         self.assertEqual(message.get_content(), "Keep this email content.\n")
-
 
 if __name__ == "__main__":
     unittest.main()
